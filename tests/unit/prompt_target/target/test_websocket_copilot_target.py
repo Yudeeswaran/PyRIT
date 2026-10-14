@@ -689,7 +689,7 @@ class TestConnectAndSend:
                 return '{"type":6}\x1e'  # Handshake PING
 
             receive_started.set()
-            await asyncio.Future()
+            return await asyncio.Future()
 
         mock_websocket.recv = AsyncMock(side_effect=receive_message)
 
