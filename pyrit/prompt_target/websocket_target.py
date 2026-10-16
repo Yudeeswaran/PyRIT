@@ -356,8 +356,7 @@ class WebsocketTarget(PromptTarget):
                     await self._receive_message_async(websocket=websocket)
         except TimeoutError:
             raise TimeoutError(
-                "Timed out waiting for an initial WebSocket message after "
-                f"{self._response_timeout_seconds} seconds."
+                f"Timed out waiting for an initial WebSocket message after {self._response_timeout_seconds} seconds."
             ) from None
 
     async def _receive_message_async(self, *, websocket: ClientConnection) -> str:

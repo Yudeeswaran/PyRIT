@@ -700,12 +700,21 @@ async def test_initialize_connection_async_uses_one_timeout_for_discarded_messag
         response_timeout_seconds=0.5,
     )
     connection = AsyncMock(spec=ClientConnection)
+    loop = asyncio.get_running_loop()
+    current_time = loop.time()
 
-    async def receive_message(*, websocket: ClientConnection) -> str:
-        await asyncio.sleep(0.35)
+    async def receive_message_async(*, websocket: ClientConnection) -> str:
+        nonlocal current_time
+        current_time += 0.35
+        # Let the loop dispatch any deadline reached by the simulated receive.
+        await asyncio.sleep(0)
+        await asyncio.sleep(0)
         return "initial message"
 
-    with patch.object(target, "_receive_message_async", side_effect=receive_message) as receive:
+    with (
+        patch.object(loop, "time", side_effect=lambda: current_time),
+        patch.object(target, "_receive_message_async", side_effect=receive_message_async) as receive,
+    ):
         with pytest.raises(TimeoutError, match="Timed out waiting for an initial WebSocket message"):
             await target._initialize_connection_async(websocket=connection)
 
@@ -731,6 +740,7 @@ async def test_get_or_create_connection_async_cancellation_during_initialization
     async def wait_for_message(*, websocket: ClientConnection) -> str:
         receive_started.set()
         await asyncio.Event().wait()
+        return "unreachable"
 
     with (
         patch.object(target, "_connect_async", new_callable=AsyncMock, return_value=connection),
